@@ -153,12 +153,32 @@ export function useHome() {
   }
 
   // 检查并发送提醒
+  const activeNotifications = ref(new Set<string>())
+
   const checkAndNotify = (): void => {
     const now = new Date()
     const today = now.toISOString().split('T')[0]
-    const passengers = passengerStore.passengerList.filter(p => p.date === today)
+    const passengers = passengerStore.passengerList.filter(p => p.date === today && !p.isServed)
     
-    passengers.forEach(passenger => {
+    // 清除所有现有的提醒
+    const notifications = document.querySelectorAll('.urgent-notification')
+    notifications.forEach(notification => {
+      ;(notification as HTMLElement).remove()
+    })
+    activeNotifications.value.clear()
+
+    // 获取提醒容器
+    const container = document.querySelector('.notification-content')
+    if (!container) return
+    
+    // 按开检时间排序，确保提醒顺序稳定
+    const sortedPassengers = passengers.sort((a, b) => {
+      const timeA = getTicketTime(a.trainNo)
+      const timeB = getTicketTime(b.trainNo)
+      return timeA.localeCompare(timeB)
+    })
+    
+    sortedPassengers.forEach((passenger) => {
       const ticketTime = getTicketTime(passenger.trainNo)
       if (!ticketTime) return
       
@@ -170,22 +190,38 @@ export function useHome() {
       
       // 如果时间差在20分钟内且未过期，发送提醒
       if (diffMinutes > 0 && diffMinutes <= 20) {
-        ElNotification({
-          title: '开检时间提醒',
-          type: 'warning',
-          duration: 10000,
-          position: 'top-right',
-          customClass: 'urgent-notification',
-          dangerouslyUseHTMLString: true,
-          message: `
-            <div style="font-size: 16px; font-weight: bold; color: #f56c6c;">
-              车次 ${passenger.trainNo} 的旅客 ${passenger.name} 即将开检
-            </div>
-            <div style="font-size: 14px; margin-top: 8px;">
-              开检时间：${ticketTime}
-            </div>
-          `
+        const notificationId = `ticket-check-${passenger.id}`
+
+        activeNotifications.value.add(notificationId)
+        
+        const notification = document.createElement('div')
+        notification.className = `urgent-notification notification-${notificationId}`
+        notification.innerHTML = `
+          <div style="font-size: 24px; font-weight: bold; color: #f56c6c; text-align: center; padding: 10px; background-color: #fef0f0; border-radius: 4px; margin-bottom: 10px; border: 2px solid #f56c6c;">
+            ⚠️ 重点旅客开检提醒 ⚠️
+          </div>
+          <div style="font-size: 18px; font-weight: bold; color: #f56c6c; margin-bottom: 10px;">
+            车次：${passenger.trainNo}
+          </div>
+          <div style="font-size: 16px; margin-bottom: 8px;">
+            旅客：${passenger.name}
+          </div>
+          <div style="font-size: 16px; margin-bottom: 8px;">
+            开检时间：<span style="color: #f56c6c; font-weight: bold;">${ticketTime}</span>
+          </div>
+          <div style="font-size: 16px; color: #f56c6c;">
+            距离开检还有 ${Math.round(diffMinutes)} 分钟
+          </div>
+          <div class="close-btn" style="position: absolute; top: 10px; right: 10px; cursor: pointer; font-size: 20px; color: #f56c6c;">×</div>
+        `
+        
+        // 添加关闭按钮事件
+        notification.querySelector('.close-btn')?.addEventListener('click', () => {
+          notification.remove()
+          activeNotifications.value.delete(notificationId)
         })
+        
+        container.appendChild(notification)
       }
     })
   }
@@ -208,8 +244,8 @@ export function useHome() {
       currentTime.value = new Date().toLocaleDateString()
     }, 60000)
     
-    // 每5分钟检查一次开检时间
-    checkInterval = window.setInterval(checkAndNotify, 5 * 60 * 1000)
+    // 每1分钟检查一次开检时间（改为更频繁的检查以确保及时清除过期提醒）
+    checkInterval = window.setInterval(checkAndNotify, 60 * 1000)
     
     // 每5秒更新一次页面数据
     updateInterval = window.setInterval(() => {
@@ -228,7 +264,7 @@ export function useHome() {
     checkAndNotify()
   })
 
-  // 页面卸载时清除定时器
+  // 页面卸载时清除定时器和提醒
   onUnmounted(() => {
     if (checkInterval) {
       window.clearInterval(checkInterval)
@@ -236,6 +272,12 @@ export function useHome() {
     if (updateInterval) {
       window.clearInterval(updateInterval)
     }
+    // 清除所有提醒
+    const notifications = document.querySelectorAll('.el-notification')
+    notifications.forEach(notification => {
+      ;(notification as HTMLElement).style.display = 'none'
+    })
+    activeNotifications.value.clear()
   })
 
   // 获取行的类名
@@ -277,13 +319,21 @@ export function useHome() {
         }
         passengerStore.addPassenger(newPassenger)
       }
-      
-      // 从首页删除该旅客
+
+      // 清除该旅客的提醒
+      const notificationId = `ticket-check-${row.id}`
+      const notification = document.querySelector(`[data-notification-id="${notificationId}"]`)
+      if (notification) {
+        ;(notification as HTMLElement).style.display = 'none'
+        activeNotifications.value.delete(notificationId)
+      }
       
       ElMessage.success('已记录离厅旅客')
       // 刷新数据
       updateTodayPassengers()
       updateStatistics()
+      // 重新检查并更新提醒
+      checkAndNotify()
     })
   }
 
@@ -364,8 +414,15 @@ export function useHome() {
     // 更新车次信息
     trainStore.updateTrain(currentTrain.value.id, currentTrain.value)
     
+    // 关闭对话框
+    dialogVisible.value = false
+    
+    // 重新检查提醒
+    checkAndNotify()
+    
     // 刷新数据
     updateTodayPassengers()
+    updateStatistics()
     
     ElMessage.success('开检时间更新成功')
   }

@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <el-row :gutter="20">
-      <el-col :span="24">
+      <el-col :span="19">
         <el-card class="welcome-card">
           <template #header>
             <div class="welcome-header">
@@ -28,70 +28,82 @@
             </el-row>
           </div>
         </el-card>
-      </el-col>
-    </el-row>
 
-    <el-row :gutter="20" style="margin-top: 20px;">
-      <el-col :span="24">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>剩余重点旅客</span>
-              <el-button-group>
-                
-                <el-button type="success" @click="handleAdd">
-                  <el-icon><Plus /></el-icon>
-                  新增旅客
-                </el-button>
-              </el-button-group>
-            </div>
-          </template>
-          
-          <el-table 
-            :data="todayPassengers" 
-            style="width: 100%"
-            :row-class-name="getRowClassName">
-            <el-table-column prop="trainNo" label="车次" width="120" />
-            <el-table-column prop="name" label="姓名" width="120" />
-            <el-table-column prop="type" label="类别" width="120">
-              <template #default="{ row }">
-                <el-tag :type="getTypeTagType(row.type)">{{ row.type }}</el-tag>
+        <el-row :gutter="20" style="margin-top: 20px;">
+          <el-col :span="24">
+            <el-card>
+              <template #header>
+                <div class="card-header">
+                  <span>剩余重点旅客</span>
+                  <el-button-group>
+                    
+                    <el-button type="success" @click="handleAdd">
+                      <el-icon><Plus /></el-icon>
+                      新增旅客
+                    </el-button>
+                  </el-button-group>
+                </div>
               </template>
-            </el-table-column>
-            <el-table-column prop="service" label="服务" />
-            <el-table-column prop="staffName" label="服务人员" width="100" />
-            <el-table-column prop="cardNo" label="牌号" width="100" />
-            <el-table-column label="开检时间" width="100">
-              <template #default="scope">
-                {{ getTicketTime(scope.row.trainNo) }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="companions" label="同行人数" width="100" align="center" />
-            <el-table-column prop="remark" label="备注" />
-            <el-table-column label="操作" width="280" fixed="right">
-              <template #default="scope">
-                <el-button-group>
-                  <el-button size="small" @click="showTrainInfo(scope.row.trainNo)">
-                    车次详情
-                  </el-button>
-                  <el-button 
-                    size="small" 
-                    type="primary"
-                    @click="handleEdit(scope.row)">
-                    编辑
-                  </el-button>
-                  <el-button 
-                    size="small" 
-                    type="success"
-                    :disabled="scope.row.isLeft"
-                    @click="handleMarkAsLeft(scope.row)">
-                    离厅
-                  </el-button>
-                </el-button-group>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
+              
+              <el-table 
+                :data="todayPassengers" 
+                style="width: 100%"
+                :row-class-name="getRowClassName">
+                <el-table-column prop="trainNo" label="车次" width="90" />
+                <el-table-column prop="name" label="姓名" width="90" />
+                <el-table-column prop="type" label="类别" width="70">
+                  <template #default="{ row }">
+                    <el-tag :type="getTypeTagType(row.type)">{{ row.type }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="service" label="服务" width="120" show-overflow-tooltip />
+                <el-table-column prop="staffName" label="服务人员" width="90" />
+                <el-table-column prop="cardNo" label="牌号" width="70" />
+                <el-table-column label="开检时间" width="90">
+                  <template #default="scope">
+                    {{ getTicketTime(scope.row.trainNo) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="companions" label="同行" width="60" align="center" />
+                <el-table-column prop="remark" label="备注" width="120" show-overflow-tooltip />
+                <el-table-column label="操作" width="240">
+                  <template #default="scope">
+                    <el-button-group>
+                      <el-button size="small" @click="showTrainInfo(scope.row.trainNo)">
+                        车次
+                      </el-button>
+                      <el-button 
+                        size="small" 
+                        type="primary"
+                        @click="handleEdit(scope.row)">
+                        编辑
+                      </el-button>
+                      <el-button 
+                        size="small" 
+                        type="success"
+                        :disabled="scope.row.isLeft"
+                        @click="handleMarkAsLeft(scope.row)">
+                        离厅
+                      </el-button>
+                    </el-button-group>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </el-col>
+        </el-row>
+      </el-col>
+
+      <el-col :span="5">
+        <div class="notification-container">
+          <div class="notification-header">
+            <el-icon><Bell /></el-icon>
+            开检提醒
+          </div>
+          <div class="notification-content">
+            <!-- 提醒将在这里显示 -->
+          </div>
+        </div>
       </el-col>
     </el-row>
 
@@ -113,8 +125,10 @@
             v-if="currentTrain"
             v-model="currentTrain.ticketTime"
             format="HH:mm"
+            value-format="HH:mm"
             placeholder="选择开检时间"
             @change="handleTicketTimeChange"
+            style="width: 120px"
           />
         </el-descriptions-item>
       </el-descriptions>
@@ -192,7 +206,7 @@
 <script setup lang="ts">
 import { useHome } from '../composables/useHome'
 import { useTrainStore } from '../store/train'
-import { Check,  Plus, User } from '@element-plus/icons-vue'
+import { Check, Plus, User, Bell } from '@element-plus/icons-vue'
 
 const trainStore = useTrainStore()
 
@@ -283,21 +297,99 @@ const {
   }
 }
 
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 400px;
+  height: calc(100vh - 40px);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+  border: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e4e7ed;
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.notification-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #909399 #f4f4f5;
+}
+
+.notification-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-content::-webkit-scrollbar-track {
+  background: #f4f4f5;
+  border-radius: 3px;
+}
+
+.notification-content::-webkit-scrollbar-thumb {
+  background: #909399;
+  border-radius: 3px;
+}
+
 :deep(.urgent-notification) {
+  position: relative !important;
+  margin: 10px;
+  width: auto;
   background-color: #fef0f0;
-  border: 1px solid #f56c6c;
-  padding: 16px;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
+  border: 2px solid #f56c6c;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(245, 108, 108, 0.4);
   
   .el-notification__title {
-    color: #f70505;
+    color: #f56c6c;
     font-size: 18px;
     font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
   }
   
   .el-notification__content {
-    margin-top: 8px;
+    margin: 0;
+    text-align: left;
   }
+
+  .el-notification__closeBtn {
+    color: #f56c6c;
+    font-size: 20px;
+    font-weight: bold;
+    top: 15px;
+  }
+
+  &.el-notification.right {
+    right: auto !important;
+  }
+}
+
+:deep(.el-table) {
+  width: 100% !important;
+  table-layout: fixed;
+}
+
+:deep(.el-table .el-button) {
+  padding: 5px 10px;
+}
+
+:deep(.el-table .el-button + .el-button) {
+  margin-left: 5px;
 }
 </style> 
