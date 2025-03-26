@@ -218,7 +218,7 @@ export function useHome() {
         notification.className = `urgent-notification notification-${notificationId}`
         notification.innerHTML = `
           <div style="font-size: 24px; font-weight: bold; color: #f56c6c; text-align: center; padding: 10px; background-color: #fef0f0; border-radius: 4px; margin-bottom: 10px; border: 2px solid #f56c6c;">
-            ⚠️ 重点旅客开检提醒 ⚠️
+            ⚠️ 旅客开检提醒 
           </div>
           <div style="font-size: 18px; font-weight: bold; color: #f56c6c; margin-bottom: 10px;">
             车次：${passenger.trainNo}
@@ -395,31 +395,102 @@ export function useHome() {
   const handleSubmit = async (): Promise<void> => {
     if (!formRef.value) return
     
-    await formRef.value.validate((valid: boolean) => {
+    await formRef.value.validate(async (valid: boolean) => {
       if (valid) {
+        let newPassenger;
+        
         if (isEdit.value && editId.value) {
           // 编辑现有旅客
-          const passenger = {
+          newPassenger = {
             ...form.value,
             id: editId.value,
             isServed: false
           }
-          passengerStore.updatePassenger(editId.value, passenger)
+          await passengerStore.updatePassenger(editId.value, newPassenger)
           ElMessage.success('编辑成功')
         } else {
           // 添加新旅客
-          const passenger = {
+          newPassenger = {
             ...form.value,
             isServed: false
           }
-          passengerStore.addPassenger(passenger)
+          const newPassengerId = await passengerStore.addPassenger(newPassenger)
+          newPassenger.id = newPassengerId
           ElMessage.success('添加成功')
         }
         
         addDialogVisible.value = false
-        // 刷新数据
-        updateTodayPassengers()
-        updateStatistics()
+        
+        // 立即刷新数据和提醒
+        await Promise.all([
+          updateTodayPassengers(),
+          updateStatistics()
+        ])
+        
+        // 使用 requestAnimationFrame 确保在下一帧立即刷新提醒
+        requestAnimationFrame(() => {
+          // 清除所有现有的提醒
+          const notifications = document.querySelectorAll('.urgent-notification')
+          notifications.forEach(notification => {
+            ;(notification as HTMLElement).remove()
+          })
+          activeNotifications.value.clear()
+          
+          // 重新检查并显示所有需要提醒的旅客
+          const now = new Date()
+          const today = now.toISOString().split('T')[0]
+          const passengers = passengerStore.passengerList.filter(p => p.date === today && !p.isServed)
+          
+          // 获取提醒容器
+          const container = document.querySelector('.notification-content')
+          if (!container) return
+          
+          // 按开检时间排序
+          passengers.sort((a, b) => {
+            const timeA = getTicketTime(a.trainNo)
+            const timeB = getTicketTime(b.trainNo)
+            return timeA.localeCompare(timeB)
+          }).forEach(passenger => {
+            const ticketTime = getTicketTime(passenger.trainNo)
+            if (!ticketTime) return
+            
+            const [hours, minutes] = ticketTime.split(':').map(Number)
+            const ticketDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
+            const diffMinutes = (ticketDateTime.getTime() - now.getTime()) / (1000 * 60)
+            
+            if (diffMinutes > 0 && diffMinutes <= 20) {
+              const notification = document.createElement('div')
+              notification.className = `urgent-notification notification-${passenger.id}`
+              notification.style.marginBottom = '10px'
+              notification.innerHTML = `
+                <div style="font-size: 24px; font-weight: bold; color: #f56c6c; text-align: center; padding: 10px; background-color: #fef0f0; border-radius: 4px; margin-bottom: 10px; border: 2px solid #f56c6c;">
+                  ⚠️ 旅客开检提醒 
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #f56c6c; margin-bottom: 10px;">
+                  车次：${passenger.trainNo}
+                </div>
+                <div style="font-size: 16px; margin-bottom: 8px;">
+                  旅客：${passenger.name}
+                </div>
+                <div style="font-size: 16px; margin-bottom: 8px;">
+                  开检时间：<span style="color: #f56c6c; font-weight: bold;">${ticketTime}</span>
+                </div>
+                <div style="font-size: 16px; color: #f56c6c;">
+                  距离开检还有 ${Math.round(diffMinutes)} 分钟
+                </div>
+                <div class="close-btn" style="position: absolute; top: 10px; right: 10px; cursor: pointer; font-size: 20px; color: #f56c6c;">×</div>
+              `
+              
+              notification.querySelector('.close-btn')?.addEventListener('click', () => {
+                notification.remove()
+                activeNotifications.value.delete(`ticket-check-${passenger.id}`)
+              })
+              
+              container.insertBefore(notification, container.firstChild)
+              activeNotifications.value.add(`ticket-check-${passenger.id}`)
+            }
+          })
+        })
       }
     })
   }

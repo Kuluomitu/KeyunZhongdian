@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <el-row :gutter="20">
-      <el-col :span="21">
+      <el-col :span="20">
         <el-card class="welcome-card">
           <template #header>
             <div class="welcome-header">
@@ -94,7 +94,7 @@
         </el-row>
       </el-col>
 
-      <el-col :span="3">
+      <el-col :span="2">
         <div class="notification-container">
           <div class="notification-header">
             <el-icon><Bell /></el-icon>
@@ -174,7 +174,7 @@
             <el-option label="病" value="病" />
             <el-option label="残" value="残" />
             <el-option label="孕" value="孕" />
-            <el-option label="军" value="军" />
+            <el-option label="特殊" value="特殊" />
           </el-select>
         </el-form-item>
         <el-form-item label="服务" prop="service">
@@ -427,12 +427,12 @@ const {
   }
 }
 
-.el-row .el-col-21 {
-  width: calc(100% - 320px);
+.el-row .el-col-20 {
+  width: calc(100% - 80px);
   min-width: 1000px;
 }
 
-.el-row .el-col-3 {
+.el-row .el-col-4 {
   width: 300px;
 }
 </style> 
