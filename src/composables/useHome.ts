@@ -121,7 +121,27 @@ export function useHome() {
   // 获取车次的开检时间
   const getTicketTime = (trainNo: string): string => {
     const train = trainStore.getTrainByNo(trainNo)
-    return train ? train.ticketTime : ''
+    if (!train || !train.ticketTime) return ''
+    
+    // 如果是ISO格式的时间字符串，提取时间部分
+    if (typeof train.ticketTime === 'string' && train.ticketTime.includes('T')) {
+      return train.ticketTime.split('T')[1].substring(0, 5)
+    }
+    
+    // 如果已经是正确的时间格式（HH:mm），直接返回
+    if (typeof train.ticketTime === 'string' && /^\d{2}:\d{2}$/.test(train.ticketTime)) {
+      return train.ticketTime
+    }
+    
+    // 处理数字格式的时间（Excel时间格式）
+    if (typeof train.ticketTime === 'number') {
+      const totalMinutes = Math.round(train.ticketTime * 24 * 60)
+      const hours = Math.floor(totalMinutes / 60) % 24
+      const minutes = totalMinutes % 60
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+    }
+    
+    return ''
   }
 
   // 检查是否临近开检时间（20分钟内）

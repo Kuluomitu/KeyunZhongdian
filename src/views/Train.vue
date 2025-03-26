@@ -123,8 +123,13 @@ const handleCurrentChange = (val: number): void => {
 const formatTime = (value: string | number | null | undefined): string => {
   if (!value) return ''
   
-  // 如果已经是正确的时间格式，直接返回
-  if (typeof value === 'string' && value.includes(':')) {
+  // 如果是ISO格式的时间字符串，提取时间部分
+  if (typeof value === 'string' && value.includes('T')) {
+    return value.split('T')[1].substring(0, 5)
+  }
+  
+  // 如果已经是正确的时间格式（HH:mm），直接返回
+  if (typeof value === 'string' && /^\d{2}:\d{2}$/.test(value)) {
     return value
   }
   

@@ -72,7 +72,10 @@ import { HomeFilled, List, User } from '@element-plus/icons-vue'
   height: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 .header-content h1 {
@@ -80,10 +83,15 @@ import { HomeFilled, List, User } from '@element-plus/icons-vue'
   font-size: 20px;
   font-weight: 600;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  margin-right: 50px;
+}
+
+.nav-buttons {
+  margin-left: 20px;
 }
 
 .nav-buttons .el-button-group {
-  margin-right: 20px;
+  margin-right: 0;
 }
 
 .nav-buttons .nav-button {

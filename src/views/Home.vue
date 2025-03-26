@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <el-row :gutter="20">
-      <el-col :span="19">
+      <el-col :span="21">
         <el-card class="welcome-card">
           <template #header>
             <div class="welcome-header">
@@ -34,7 +34,7 @@
             <el-card>
               <template #header>
                 <div class="card-header">
-                  <span>剩余重点旅客</span>
+                  <span>重点旅客登记</span>
                   <el-button-group>
                     
                     <el-button type="success" @click="handleAdd">
@@ -70,7 +70,7 @@
                   <template #default="scope">
                     <el-button-group>
                       <el-button size="small" @click="showTrainInfo(scope.row.trainNo)">
-                        车次
+                        车次信息
                       </el-button>
                       <el-button 
                         size="small" 
@@ -94,7 +94,7 @@
         </el-row>
       </el-col>
 
-      <el-col :span="5">
+      <el-col :span="3">
         <div class="notification-container">
           <div class="notification-header">
             <el-icon><Bell /></el-icon>
@@ -237,10 +237,16 @@ const {
 <style scoped>
 .home {
   padding: 20px;
+  min-width: 1400px;
+  max-width: 1920px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .welcome-card {
   margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
 }
 
 .welcome-header {
@@ -255,8 +261,19 @@ const {
 
 .card-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  position: relative;
+}
+
+.card-header span {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.el-button-group {
+  position: absolute;
+  right: 0;
 }
 
 .el-statistic {
@@ -271,10 +288,6 @@ const {
 :deep(.el-card__header) {
   border-bottom: 1px solid #e4e7ed;
   padding: 15px 20px;
-}
-
-.el-button-group {
-  margin-left: 10px;
 }
 
 .el-button-group .el-button {
@@ -301,7 +314,7 @@ const {
   position: fixed;
   top: 20px;
   right: 20px;
-  width: 400px;
+  width: 300px;
   height: calc(100vh - 40px);
   background: #fff;
   border-radius: 8px;
@@ -309,6 +322,7 @@ const {
   border: 1px solid #e4e7ed;
   display: flex;
   flex-direction: column;
+  z-index: 1;
 }
 
 .notification-header {
@@ -383,6 +397,7 @@ const {
 :deep(.el-table) {
   width: 100% !important;
   table-layout: fixed;
+  min-width: 1000px;
 }
 
 :deep(.el-table .el-button) {
@@ -391,5 +406,33 @@ const {
 
 :deep(.el-table .el-button + .el-button) {
   margin-left: 5px;
+}
+
+.el-card {
+  position: relative;
+  z-index: 2;
+}
+
+@media screen and (max-width: 1600px) {
+  .notification-container {
+    width: 250px;
+  }
+  
+  :deep(.el-table) {
+    font-size: 13px;
+  }
+  
+  :deep(.el-button) {
+    font-size: 13px;
+  }
+}
+
+.el-row .el-col-21 {
+  width: calc(100% - 320px);
+  min-width: 1000px;
+}
+
+.el-row .el-col-3 {
+  width: 300px;
 }
 </style> 
