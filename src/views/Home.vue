@@ -190,8 +190,8 @@
             <el-option label="特殊" value="特殊" />
           </el-select>
         </el-form-item>
-        <el-form-item label="服务" prop="service">
-          <el-select v-model="form.service" placeholder="请选择服务类型" style="width: 100%">
+        <el-form-item label="服务" :required="false">
+          <el-select v-model="form.service" placeholder="请选择服务类型" style="width: 100%" clearable>
             <el-option label="引导" value="引导" />
             <el-option label="提供轮椅" value="提供轮椅" />
             <el-option label="提供担架" value="提供担架" />
@@ -200,7 +200,25 @@
           </el-select>
         </el-form-item>
         <el-form-item label="服务人员" prop="staffName">
-          <el-input v-model="form.staffName" placeholder="请输入服务工作人员姓名" />
+          <el-select 
+            v-model="form.staffName" 
+            placeholder="请选择服务工作人员"
+            filterable
+            default-first-option
+            style="width: 100%">
+            <el-option
+              v-for="staff in staffStore.getActiveStaffList()"
+              :key="staff.staffNo"
+              :label="staff.label"
+              :value="staff.value">
+              <div style="display: flex; justify-content: space-between; align-items: center">
+                <span style="font-size: 14px">{{ staff.value }}</span>
+                <span style="color: #909399; font-size: 12px">
+                  {{ staff.staffNo }} - {{ staff.team }}
+                </span>
+              </div>
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="同行人数" prop="companions">
           <el-input-number v-model="form.companions" :min="0" />
@@ -225,9 +243,11 @@
 <script setup lang="ts">
 import { useHome } from '../composables/useHome'
 import { useTrainStore } from '../store/train'
+import { useStaffStore } from '../store/staff'
 import { Check, Plus, User, Bell } from '@element-plus/icons-vue'
 
 const trainStore = useTrainStore()
+const staffStore = useStaffStore()
 
 const {
   currentTime,
@@ -251,6 +271,19 @@ const {
   getTicketTime,
   handleTicketTimeChange
 } = useHome()
+
+// 添加服务人员过滤方法
+const filterStaff = (query: string) => {
+  const staffList = staffStore.getActiveStaffList()
+  if (!query) return staffList
+  
+  const lowercaseQuery = query.toLowerCase()
+  return staffList.filter(staff => 
+    staff.value.toLowerCase().includes(lowercaseQuery) ||  // 匹配姓名
+    staff.staffNo.toLowerCase().includes(lowercaseQuery) || // 匹配工号
+    staff.team.toLowerCase().includes(lowercaseQuery)      // 匹配班组
+  )
+}
 </script>
 
 <style scoped>

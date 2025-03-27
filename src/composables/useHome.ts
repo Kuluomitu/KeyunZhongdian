@@ -43,7 +43,7 @@ export function useHome() {
     trainNo: [{ required: true, message: '请选择车次', trigger: 'change' }],
     name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
     type: [{ required: true, message: '请选择类别', trigger: 'change' }],
-    service: [{ required: true, message: '请选择服务类型', trigger: 'change' }],
+    service: [],
     staffName: [{ required: true, message: '请输入服务工作人员姓名', trigger: 'blur' }],
     cardNo: [
       { required: true, message: '请输入牌号', trigger: 'blur' },

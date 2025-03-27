@@ -26,6 +26,13 @@
               <el-icon><User /></el-icon>
               旅客信息
             </el-button>
+            <el-button 
+              :type="$route.path === '/staff' ? 'primary' : 'default'"
+              :class="{ 'nav-button': true, 'active': $route.path === '/staff' }"
+              @click="$router.push('/staff')">
+              <el-icon><User /></el-icon>
+              服务人员管理
+            </el-button>
           </el-button-group>
         </div>
       </div>
