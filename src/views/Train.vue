@@ -36,7 +36,8 @@
       <el-table-column prop="id" label="序号" width="60" fixed="left" />
       <el-table-column prop="trainNo" label="车次" width="100" fixed="left" />
       <el-table-column prop="bureau" label="担当局" width="100" />
-      <el-table-column prop="route" label="运行区间" width="150" />
+      <el-table-column prop="route" label="运行区间1" width="150" />
+      <el-table-column prop="route2" label="运行区间2" width="150" />
       <el-table-column prop="arrivalTime" label="到点" width="80" />
       <el-table-column prop="departureTime" label="开点" width="80" />
       <el-table-column prop="track" label="股道" width="80" />
@@ -171,7 +172,105 @@ const handleImport = (): void => {
 
       const workbook = XLSX.read(data, { type: 'array' })
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(firstSheet, { range: 1 })
+      
+      // 获取工作表的范围
+      const range = XLSX.utils.decode_range(firstSheet['!ref'] || 'A1')
+      const jsonData: Array<Record<string, any>> = []
+      
+      // 从第三行开始读取数据（跳过表头和序列名行）
+      for (let R = 2; R <= range.e.r; ++R) {
+        const row: Record<string, any> = {}
+        
+        // 读取序号（A列）
+        const idCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 0})]
+        row['序号'] = idCell ? idCell.v : ''
+        
+        // 读取担当局（B列）
+        const bureauCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 1})]
+        row['担当局'] = bureauCell ? bureauCell.v : ''
+        
+        // 读取车次（C列）
+        const trainNoCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 2})]
+        row['车次'] = trainNoCell ? trainNoCell.v : ''
+        
+        // 读取运行区间1（D列）
+        const route1Cell = firstSheet[XLSX.utils.encode_cell({r: R, c: 3})]
+        row['运行区间'] = route1Cell ? route1Cell.v : ''
+        
+        // 读取运行区间2（E列）
+        const route2Cell = firstSheet[XLSX.utils.encode_cell({r: R, c: 4})]
+        row['运行区间2'] = route2Cell ? route2Cell.v : ''
+        
+        // 读取到点（F列）
+        const arrivalCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 5})]
+        row['到点'] = arrivalCell ? arrivalCell.v : ''
+        
+        // 读取开点（G列）
+        const departureCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 6})]
+        row['开点'] = departureCell ? departureCell.v : ''
+        
+        // 读取股道（H列）
+        const trackCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 7})]
+        row['股道'] = trackCell ? trackCell.v : ''
+        
+        // 读取站台（I列）
+        const platformCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 8})]
+        row['站台'] = platformCell ? platformCell.v : ''
+        
+        // 读取站停（J列）
+        const stopTimeCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 9})]
+        row['站停'] = stopTimeCell ? stopTimeCell.v : ''
+        
+        // 读取车型（K列）
+        const trainTypeCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 10})]
+        row['车型'] = trainTypeCell ? trainTypeCell.v : ''
+        
+        // 读取定员（L列）
+        const capacityCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 11})]
+        row['定员'] = capacityCell ? capacityCell.v : ''
+        
+        // 读取编组（M列）
+        const formationCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 12})]
+        row['编组'] = formationCell ? formationCell.v : ''
+        
+        // 读取检票口（N列）
+        const ticketGateCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 13})]
+        row['检票口'] = ticketGateCell ? ticketGateCell.v : ''
+
+        // 读取开检时间（O列）
+        const ticketTimeCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 14})]
+        row['开检时间'] = ticketTimeCell ? ticketTimeCell.v : ''
+
+        // 读取检票上岗时间（P列）
+        const ticketStaffTimeCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 15})]
+        row['检票上岗时间'] = ticketStaffTimeCell ? ticketStaffTimeCell.v : ''
+
+        // 读取站台上岗时间（Q列）
+        const platformStaffTimeCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 16})]
+        row['站台上岗时间'] = platformStaffTimeCell ? platformStaffTimeCell.v : ''
+
+        // 读取立折时间（R列）
+        const foldingTimeCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 17})]
+        row['立折时间'] = foldingTimeCell ? foldingTimeCell.v : ''
+
+        // 读取给水作业（S列）
+        const waterServiceCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 18})]
+        row['给水作业'] = waterServiceCell ? waterServiceCell.v : ''
+
+        // 读取吸污（T列）
+        const sewageServiceCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 19})]
+        row['吸污'] = sewageServiceCell ? sewageServiceCell.v : ''
+
+        // 读取行包作业（U列）
+        const luggageServiceCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 20})]
+        row['行包作业'] = luggageServiceCell ? luggageServiceCell.v : ''
+
+        // 读取备注（V列）
+        const remarkCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 21})]
+        row['备注'] = remarkCell ? remarkCell.v : ''
+
+        jsonData.push(row)
+      }
       
       console.log('Excel原始数据:', jsonData)
       
@@ -179,9 +278,10 @@ const handleImport = (): void => {
       const processedData = jsonData.map(item => {
         console.log('处理单行数据:', item)
         return {
-          bureau: item['担当局'] || '',
-          trainNo: item['车次'] || '',
+          bureau: item['担当局'] || '',  // 担当局对应B列
+          trainNo: item['车次'] || '',   // 车次对应C列
           route: item['运行区间'] || '',
+          route2: item['运行区间2'] || '',
           arrivalTime: formatTime(item['到点']),
           departureTime: formatTime(item['开点']),
           track: item['股道'] || '',

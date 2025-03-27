@@ -7,6 +7,7 @@ export interface Train {
   bureau: string
   trainNo: string
   route: string
+  route2: string
   arrivalTime: string
   departureTime: string
   track: string

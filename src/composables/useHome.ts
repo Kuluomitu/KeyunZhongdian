@@ -43,6 +43,7 @@ export function useHome() {
     trainNo: [{ required: true, message: '请选择车次', trigger: 'change' }],
     name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
     type: [{ required: true, message: '请选择类别', trigger: 'change' }],
+    service: [{ required: true, message: '请选择服务类型', trigger: 'change' }],
     staffName: [{ required: true, message: '请输入服务工作人员姓名', trigger: 'blur' }],
     cardNo: [
       { required: true, message: '请输入牌号', trigger: 'blur' },
@@ -144,7 +145,7 @@ export function useHome() {
     return ''
   }
 
-  // 检查是否临近开检时间（20分钟内）
+  // 检查是否临近开检时间
   const isNearTicketTime = (trainNo: string): boolean => {
     const ticketTime = getTicketTime(trainNo)
     if (!ticketTime) return false
@@ -155,7 +156,11 @@ export function useHome() {
     
     // 计算时间差（分钟）
     const diffMinutes = (ticketDateTime.getTime() - now.getTime()) / (1000 * 60)
-    return diffMinutes > 0 && diffMinutes <= 20
+    
+    // 获取车次类型和提醒时间
+    const { remindMinutes } = getTrainTypeAndRemindTime(trainNo)
+    
+    return diffMinutes > 0 && diffMinutes <= remindMinutes
   }
 
   // 检查是否已过开检时间
@@ -170,6 +175,35 @@ export function useHome() {
     // 计算时间差（分钟）
     const diffMinutes = (ticketDateTime.getTime() - now.getTime()) / (1000 * 60)
     return diffMinutes < 0
+  }
+
+  // 获取车次类型和提醒时间
+  const getTrainTypeAndRemindTime = (trainNo: string): { type: string, remindMinutes: number } => {
+    const train = trainStore.getTrainByNo(trainNo)
+    if (!train) return { type: 'unknown', remindMinutes: 20 }
+
+    // 获取运行区间1和运行区间2
+    const route1 = train.route || ''
+    const route2 = train.route2 || ''
+    
+    // 判断车次类型
+    if (route1 === '西安') {
+      // 始发车
+      if (trainNo.startsWith('T') || trainNo.startsWith('K')) {
+        return { type: '始发车', remindMinutes: 30 }
+      } else if (trainNo.startsWith('C')) {
+        return { type: '始发车', remindMinutes: 20 }
+      }
+      return { type: '始发车', remindMinutes: 20 } // 其他始发车默认20分钟
+    } 
+    
+    if (route2 === '西安') {
+      // 终到车 - 不需要开检提醒
+      return { type: '终到车', remindMinutes: 0 }
+    } 
+    
+    // 如果运行区间1和运行区间2都不是西安，则为通过车
+    return { type: '通过车', remindMinutes: 3 }
   }
 
   // 检查并发送提醒
@@ -208,31 +242,49 @@ export function useHome() {
       // 计算时间差（分钟）
       const diffMinutes = (ticketDateTime.getTime() - now.getTime()) / (1000 * 60)
       
-      // 如果时间差在20分钟内且未过期，发送提醒
-      if (diffMinutes > 0 && diffMinutes <= 20) {
+      // 获取车次类型和提醒时间
+      const { type, remindMinutes } = getTrainTypeAndRemindTime(passenger.trainNo)
+      
+      // 如果时间差在提醒时间内且未过期，发送提醒
+      if (diffMinutes > 0 && diffMinutes <= remindMinutes) {
         const notificationId = `ticket-check-${passenger.id}`
-
         activeNotifications.value.add(notificationId)
         
         const notification = document.createElement('div')
         notification.className = `urgent-notification notification-${notificationId}`
         notification.innerHTML = `
-          <div style="font-size: 24px; font-weight: bold; color: #f56c6c; text-align: center; padding: 10px; background-color: #fef0f0; border-radius: 4px; margin-bottom: 10px; border: 2px solid #f56c6c;">
-            ⚠️ 旅客开检提醒 
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; background-color: #fef0f0; border-radius: 3px; border: 1px solid #f56c6c; margin-bottom: 4px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #f56c6c; font-size: 12px;">⚠️</span>
+              <span style="color: #f56c6c; font-size: 12px; font-weight: bold;">旅客开检提醒</span>
+              <span style="color: #f56c6c; font-size: 12px;">[${type}]</span>
+            </div>
+            <div class="close-btn" style="cursor: pointer; font-size: 12px; color: #f56c6c;">×</div>
           </div>
-          <div style="font-size: 18px; font-weight: bold; color: #f56c6c; margin-bottom: 10px;">
-            车次：${passenger.trainNo}
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 0 4px; margin-bottom: 4px;">
+            <div style="font-size: 11px;">
+              <span style="color: #606266;">车次：</span>
+              <span style="color: #f56c6c; font-weight: bold;">${passenger.trainNo}</span>
+            </div>
+            <div style="font-size: 11px;">
+              <span style="color: #606266;">旅客：</span>
+              <span style="font-weight: bold;">${passenger.name}</span>
+            </div>
+            <div style="font-size: 11px;">
+              <span style="color: #606266;">号牌：</span>
+              <span style="font-weight: bold;">${passenger.cardNo}</span>
+            </div>
           </div>
-          <div style="font-size: 16px; margin-bottom: 8px;">
-            旅客：${passenger.name}
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 0 4px;">
+            <div style="font-size: 11px;">
+              <span style="color: #606266;">开检时间：</span>
+              <span style="color: #f56c6c; font-weight: bold;">${ticketTime}</span>
+            </div>
+            <div style="font-size: 11px;">
+              <span style="color: #606266;">距离开检：</span>
+              <span style="color: #f56c6c; font-weight: bold;">${Math.round(diffMinutes)}分钟</span>
+            </div>
           </div>
-          <div style="font-size: 16px; margin-bottom: 8px;">
-            开检时间：<span style="color: #f56c6c; font-weight: bold;">${ticketTime}</span>
-          </div>
-          <div style="font-size: 16px; color: #f56c6c;">
-            距离开检还有 ${Math.round(diffMinutes)} 分钟
-          </div>
-          <div class="close-btn" style="position: absolute; top: 10px; right: 10px; cursor: pointer; font-size: 20px; color: #f56c6c;">×</div>
         `
         
         // 添加关闭按钮事件
@@ -458,27 +510,46 @@ export function useHome() {
             const ticketDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
             const diffMinutes = (ticketDateTime.getTime() - now.getTime()) / (1000 * 60)
             
-            if (diffMinutes > 0 && diffMinutes <= 20) {
+            // 获取车次类型和提醒时间
+            const { type, remindMinutes } = getTrainTypeAndRemindTime(passenger.trainNo)
+            
+            // 如果时间差在提醒时间内且未过期，发送提醒
+            if (diffMinutes > 0 && diffMinutes <= remindMinutes) {
               const notification = document.createElement('div')
               notification.className = `urgent-notification notification-${passenger.id}`
-              notification.style.marginBottom = '10px'
               notification.innerHTML = `
-                <div style="font-size: 24px; font-weight: bold; color: #f56c6c; text-align: center; padding: 10px; background-color: #fef0f0; border-radius: 4px; margin-bottom: 10px; border: 2px solid #f56c6c;">
-                  ⚠️ 旅客开检提醒 
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; background-color: #fef0f0; border-radius: 3px; border: 1px solid #f56c6c; margin-bottom: 4px;">
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="color: #f56c6c; font-size: 12px;">⚠️</span>
+                    <span style="color: #f56c6c; font-size: 12px; font-weight: bold;">旅客开检提醒</span>
+                    <span style="color: #f56c6c; font-size: 12px;">[${type}]</span>
+                  </div>
+                  <div class="close-btn" style="cursor: pointer; font-size: 12px; color: #f56c6c;">×</div>
                 </div>
-                <div style="font-size: 18px; font-weight: bold; color: #f56c6c; margin-bottom: 10px;">
-                  车次：${passenger.trainNo}
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 0 4px; margin-bottom: 4px;">
+                  <div style="font-size: 11px;">
+                    <span style="color: #606266;">车次：</span>
+                    <span style="color: #f56c6c; font-weight: bold;">${passenger.trainNo}</span>
+                  </div>
+                  <div style="font-size: 11px;">
+                    <span style="color: #606266;">旅客：</span>
+                    <span style="font-weight: bold;">${passenger.name}</span>
+                  </div>
+                  <div style="font-size: 11px;">
+                    <span style="color: #606266;">号牌：</span>
+                    <span style="font-weight: bold;">${passenger.cardNo}</span>
+                  </div>
                 </div>
-                <div style="font-size: 16px; margin-bottom: 8px;">
-                  旅客：${passenger.name}
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 0 4px;">
+                  <div style="font-size: 11px;">
+                    <span style="color: #606266;">开检时间：</span>
+                    <span style="color: #f56c6c; font-weight: bold;">${ticketTime}</span>
+                  </div>
+                  <div style="font-size: 11px;">
+                    <span style="color: #606266;">距离开检：</span>
+                    <span style="color: #f56c6c; font-weight: bold;">${Math.round(diffMinutes)}分钟</span>
+                  </div>
                 </div>
-                <div style="font-size: 16px; margin-bottom: 8px;">
-                  开检时间：<span style="color: #f56c6c; font-weight: bold;">${ticketTime}</span>
-                </div>
-                <div style="font-size: 16px; color: #f56c6c;">
-                  距离开检还有 ${Math.round(diffMinutes)} 分钟
-                </div>
-                <div class="close-btn" style="position: absolute; top: 10px; right: 10px; cursor: pointer; font-size: 20px; color: #f56c6c;">×</div>
               `
               
               notification.querySelector('.close-btn')?.addEventListener('click', () => {

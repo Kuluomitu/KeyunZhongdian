@@ -29,6 +29,19 @@
           </div>
         </el-card>
 
+        <!-- 将开检提醒移到这里 -->
+        <el-card class="notification-card" style="margin-top: 20px;">
+          <template #header>
+            <div class="notification-header">
+              <el-icon><Bell /></el-icon>
+              开检提醒
+            </div>
+          </template>
+          <div class="notification-content">
+            <!-- 提醒将在这里显示 -->
+          </div>
+        </el-card>
+
         <el-row :gutter="20" style="margin-top: 20px;">
           <el-col :span="24">
             <el-card>
@@ -36,10 +49,9 @@
                 <div class="card-header">
                   <span>重点旅客登记</span>
                   <el-button-group>
-                    
                     <el-button type="success" @click="handleAdd">
                       <el-icon><Plus /></el-icon>
-                      新增旅客
+                      添加旅客
                     </el-button>
                   </el-button-group>
                 </div>
@@ -114,7 +126,8 @@
       <el-descriptions :column="2" border>
         <el-descriptions-item label="车次">{{ currentTrain?.trainNo }}</el-descriptions-item>
         <el-descriptions-item label="担当局">{{ currentTrain?.bureau }}</el-descriptions-item>
-        <el-descriptions-item label="运行区间">{{ currentTrain?.route }}</el-descriptions-item>
+        <el-descriptions-item label="运行区间1">{{ currentTrain?.route }}</el-descriptions-item>
+        <el-descriptions-item label="运行区间2">{{ currentTrain?.route2 }}</el-descriptions-item>
         <el-descriptions-item label="到点">{{ currentTrain?.arrivalTime }}</el-descriptions-item>
         <el-descriptions-item label="开点">{{ currentTrain?.departureTime }}</el-descriptions-item>
         <el-descriptions-item label="股道">{{ currentTrain?.track }}</el-descriptions-item>
@@ -178,7 +191,13 @@
           </el-select>
         </el-form-item>
         <el-form-item label="服务" prop="service">
-          <el-input v-model="form.service" />
+          <el-select v-model="form.service" placeholder="请选择服务类型" style="width: 100%">
+            <el-option label="引导" value="引导" />
+            <el-option label="提供轮椅" value="提供轮椅" />
+            <el-option label="提供担架" value="提供担架" />
+            <el-option label="盲人" value="盲人" />
+            <el-option label="其他" value="其他" />
+          </el-select>
         </el-form-item>
         <el-form-item label="服务人员" prop="staffName">
           <el-input v-model="form.staffName" placeholder="请输入服务工作人员姓名" />
@@ -310,102 +329,61 @@ const {
   }
 }
 
-.notification-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 300px;
-  height: calc(100vh - 40px);
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
-  border: 1px solid #e4e7ed;
-  display: flex;
-  flex-direction: column;
-  z-index: 1;
+.notification-card {
+  margin-bottom: 20px;
 }
 
 .notification-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #e4e7ed;
-  font-size: 16px;
-  font-weight: bold;
-  color: #303133;
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
 }
 
 .notification-content {
-  flex: 1;
+  max-height: 300px;
   overflow-y: auto;
-  padding: 10px;
+  padding: 8px;
   scrollbar-width: thin;
   scrollbar-color: #909399 #f4f4f5;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
 
 .notification-content::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .notification-content::-webkit-scrollbar-track {
   background: #f4f4f5;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 .notification-content::-webkit-scrollbar-thumb {
   background: #909399;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 :deep(.urgent-notification) {
   position: relative !important;
-  margin: 10px;
-  width: auto;
-  background-color: #fef0f0;
-  border: 2px solid #f56c6c;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(245, 108, 108, 0.4);
+  margin: 0;
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #e4e7ed;
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   
-  .el-notification__title {
-    color: #f56c6c;
-    font-size: 18px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 10px;
-  }
-  
-  .el-notification__content {
-    margin: 0;
-    text-align: left;
-  }
-
-  .el-notification__closeBtn {
-    color: #f56c6c;
-    font-size: 20px;
-    font-weight: bold;
-    top: 15px;
-  }
-
-  &.el-notification.right {
-    right: auto !important;
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 }
 
-:deep(.el-table) {
-  width: 100% !important;
-  table-layout: fixed;
-  min-width: 1000px;
-}
-
-:deep(.el-table .el-button) {
-  padding: 5px 10px;
-}
-
-:deep(.el-table .el-button + .el-button) {
-  margin-left: 5px;
+.notification-container {
+  display: none;
 }
 
 .el-card {
