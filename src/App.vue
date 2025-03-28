@@ -51,6 +51,18 @@
 
 <script setup>
 import { HomeFilled, List, User } from '@element-plus/icons-vue'
+import { onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+onMounted(() => {
+  console.log('App mounted, current route:', route.path)
+})
+
+watch(() => route.path, (newPath) => {
+  console.log('Route changed to:', newPath)
+})
 </script>
 
 <style>

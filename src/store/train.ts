@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 // 定义列车信息接口
 export interface Train {
@@ -31,7 +31,14 @@ export const useTrainStore = defineStore('train', () => {
   // 从localStorage获取初始数据
   const trainList = ref<Train[]>(JSON.parse(localStorage.getItem('trainList') || '[]'))
 
+  // 监听数据变化，自动保存到localStorage
+  watch(trainList, (newList) => {
+    console.log('trainList changed:', newList)
+    localStorage.setItem('trainList', JSON.stringify(newList))
+  }, { deep: true })
+
   const addTrains = (trains: Omit<Train, 'id'>[]): void => {
+    console.log('Adding trains:', trains)
     trainList.value = trains.map((train, index) => ({
       ...train,
       id: index + 1

@@ -5,6 +5,8 @@ import { ElNotification, ElMessageBox, ElMessage } from 'element-plus'
 import type { Passenger, PassengerForm } from '../types/passenger'
 import type { Train } from '../store/train'
 import { PassengerType, PageType } from '../types/passenger'
+import type { UploadFile } from 'element-plus'
+import * as XLSX from 'xlsx'
 
 export function useHome() {
   const passengerStore = usePassengerStore()
@@ -74,25 +76,29 @@ export function useHome() {
   // 更新今日旅客列表
   const updateTodayPassengers = () => {
     const today = new Date().toISOString().split('T')[0]
-    const passengers = passengerStore.passengerList.filter(p => p.date === today && p.isServed === false)
+    console.log('更新今日旅客列表，当前日期:', today)
+    
+    // 获取所有未服务的今日旅客
+    const allPassengers = passengerStore.passengerList
+    console.log('所有旅客数据:', allPassengers.length, '条')
+    
+    const passengers = allPassengers.filter(p => {
+      const isToday = p.date === today
+      const isNotServed = !p.isServed
+      console.log(`旅客 ${p.name} (${p.trainNo}): 日期=${p.date}, 已服务=${p.isServed}, 是今天=${isToday}, 未服务=${isNotServed}`)
+      return isToday && isNotServed
+    })
+    
+    console.log('筛选后的今日旅客:', passengers.length, '条')
     
     // 按开检时间排序
     todayPassengers.value = passengers.sort((a, b) => {
       const timeA = getTicketTime(a.trainNo)
       const timeB = getTicketTime(b.trainNo)
-      
-      // 如果时间格式正确，转换为分钟数进行比较
-      if (timeA && timeB && timeA.includes(':') && timeB.includes(':')) {
-        const [hoursA, minutesA] = timeA.split(':').map(Number)
-        const [hoursB, minutesB] = timeB.split(':').map(Number)
-        const totalMinutesA = hoursA * 60 + minutesA
-        const totalMinutesB = hoursB * 60 + minutesB
-        return totalMinutesA - totalMinutesB
-      }
-      
-      // 如果时间格式不正确，按字符串比较
       return timeA.localeCompare(timeB)
     })
+    
+    console.log('最终显示的今日旅客列表:', todayPassengers.value.length, '条')
   }
 
   // 根据类别返回标签类型
@@ -589,6 +595,171 @@ export function useHome() {
     ElMessage.success('开检时间更新成功')
   }
 
+  // 处理日期格式的函数
+  const formatDate = (dateValue: any): string => {
+    if (!dateValue) return new Date().toISOString().split('T')[0]
+    
+    // 如果是字符串类型
+    if (typeof dateValue === 'string') {
+      // 处理 "YYYY.M.D" 格式
+      const fullDateMatch = dateValue.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/)
+      if (fullDateMatch) {
+        const [_, year, month, day] = fullDateMatch
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+      }
+      
+      // 处理 "M.D" 格式
+      const shortDateMatch = dateValue.match(/^(\d{1,2})\.(\d{1,2})$/)
+      if (shortDateMatch) {
+        const [_, month, day] = shortDateMatch
+        const year = new Date().getFullYear()
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+      }
+      
+      // 处理 "M月D日" 格式
+      const chineseDateMatch = dateValue.match(/^(\d{1,2})月(\d{1,2})日$/)
+      if (chineseDateMatch) {
+        const month = chineseDateMatch[1].padStart(2, '0')
+        const day = chineseDateMatch[2].padStart(2, '0')
+        const year = new Date().getFullYear()
+        return `${year}-${month}-${day}`
+      }
+      
+      // 如果已经是ISO格式，直接返回
+      if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return dateValue
+      }
+    }
+    
+    // 处理数字格式的日期（Excel日期序列号）
+    if (typeof dateValue === 'number') {
+      if (dateValue > 1000) { // Excel日期序列号通常很大
+        const jsDate = new Date((dateValue - 25569) * 24 * 60 * 60 * 1000)
+        const year = jsDate.getFullYear()
+        const month = (jsDate.getMonth() + 1).toString().padStart(2, '0')
+        const day = jsDate.getDate().toString().padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
+      // 处理类似3.28这样的格式（转换为字符串后再处理）
+      return formatDate(dateValue.toString())
+    }
+    
+    // 如果是日期对象
+    if (dateValue instanceof Date) {
+      const year = dateValue.getFullYear()
+      const month = (dateValue.getMonth() + 1).toString().padStart(2, '0')
+      const day = dateValue.getDate().toString().padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    
+    // 默认返回今天的日期
+    return new Date().toISOString().split('T')[0]
+  }
+
+  const handleFileChange = (file: UploadFile) => {
+    if (!file.raw) {
+      ElMessage.warning('文件无效')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result
+        if (!data) {
+          throw new Error('文件读取失败')
+        }
+
+        const workbook = XLSX.read(data, { 
+          type: 'array',
+          cellDates: true,
+          dateNF: 'yyyy-mm-dd',
+          WTF: true
+        })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+        
+        // 获取工作表的范围
+        const range = XLSX.utils.decode_range(firstSheet['!ref'] || 'A1')
+        
+        // 获取当前日期（与手动添加旅客使用相同的日期格式）
+        const today = new Date().toISOString().split('T')[0]
+        console.log('导入使用的日期:', today)
+        
+        // 从第二行开始读取数据（跳过表头）
+        let importedCount = 0
+        
+        for (let R = 1; R <= range.e.r; ++R) {
+          const row: any = {}
+          
+          // 统一使用当前日期
+          row.date = today
+          
+          // 读取车次（B列）
+          const trainNoCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 1})]
+          row.trainNo = trainNoCell ? String(trainNoCell.v || '').trim() : ''
+          
+          // 读取姓名（C列）
+          const nameCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 2})]
+          row.name = nameCell ? String(nameCell.v || '').trim() : ''
+          
+          // 读取服务（D列）
+          const serviceCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 3})]
+          row.service = serviceCell ? String(serviceCell.v || '').trim() : ''
+          
+          // 读取服务人员（F列）
+          const staffNameCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 5})]
+          row.staffName = staffNameCell ? String(staffNameCell.v || '').trim() : ''
+          
+          // 读取同行人数（G列）
+          const companionsCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 6})]
+          row.companions = companionsCell ? Number(companionsCell.v || 0) : 0
+          
+          // 读取牌号（H列）
+          const cardNoCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 7})]
+          row.cardNo = cardNoCell ? String(cardNoCell.v || '').trim() : ''
+          
+          // 读取备注（I列）
+          const remarkCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 8})]
+          row.remark = remarkCell ? String(remarkCell.v || '').trim() : ''
+
+          // 只添加有效的行（至少需要车次和姓名）
+          if (row.trainNo && row.name) {
+            // 设置默认值
+            row.type = '老' // 默认类型为老年人
+            
+            console.log('准备导入的旅客数据:', row)
+            
+            // 直接添加到 store
+            await passengerStore.addPassenger(row)
+            importedCount++
+          }
+        }
+
+        console.log(`成功导入 ${importedCount} 条旅客数据`)
+        
+        // 强制更新数据
+        console.log('开始更新今日旅客列表...')
+        updateTodayPassengers()
+        
+        // 更新统计数据
+        console.log('更新统计数据...')
+        updateStatistics()
+        
+        // 立即检查提醒
+        console.log('检查提醒...')
+        checkAndNotify()
+        
+        ElMessage.success(`成功导入 ${importedCount} 条旅客数据`)
+      } catch (error) {
+        console.error('导入失败:', error)
+        ElMessage.error('数据导入失败，请检查文件格式是否正确')
+      }
+    }
+
+    reader.readAsArrayBuffer(file.raw)
+  }
+
   return {
     currentTime,
     dialogVisible,
@@ -609,6 +780,7 @@ export function useHome() {
     handleEdit,
     handleSubmit,
     getTicketTime,
-    handleTicketTimeChange
+    handleTicketTimeChange,
+    handleFileChange
   }
 } 

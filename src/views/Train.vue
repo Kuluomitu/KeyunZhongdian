@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import * as XLSX from 'xlsx'
 import { useTrainStore } from '../store/train'
 import { ElMessage } from 'element-plus'
@@ -85,6 +85,11 @@ const fileList = ref<UploadFile[]>([])
 const searchQuery = ref('')
 const currentPage = ref(1)
 const pageSize = ref(20)
+
+onMounted(() => {
+  console.log('Train component mounted')
+  console.log('Initial trainList:', trainStore.trainList)
+})
 
 // 过滤后的数据
 const filteredData = computed(() => {
@@ -161,6 +166,7 @@ const handleImport = (): void => {
     return
   }
 
+  console.log('Starting file import:', file.name)
   const reader = new FileReader()
 
   reader.onload = (e) => {
@@ -170,11 +176,17 @@ const handleImport = (): void => {
         throw new Error('文件读取失败')
       }
 
+      console.log('File read successfully')
       const workbook = XLSX.read(data, { type: 'array' })
+      console.log('Workbook sheets:', workbook.SheetNames)
+      
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+      console.log('First sheet:', firstSheet)
       
       // 获取工作表的范围
       const range = XLSX.utils.decode_range(firstSheet['!ref'] || 'A1')
+      console.log('Sheet range:', range)
+      
       const jsonData: Array<Record<string, any>> = []
       
       // 从第三行开始读取数据（跳过表头和序列名行）
@@ -269,15 +281,17 @@ const handleImport = (): void => {
         const remarkCell = firstSheet[XLSX.utils.encode_cell({r: R, c: 21})]
         row['备注'] = remarkCell ? remarkCell.v : ''
 
-        jsonData.push(row)
+        if (row['车次']) {  // 只添加有车次的行
+          console.log(`Row ${R} data:`, row)
+          jsonData.push(row)
+        }
       }
       
       console.log('Excel原始数据:', jsonData)
       
       // 处理Excel数据，确保字段名称匹配
       const processedData = jsonData.map(item => {
-        console.log('处理单行数据:', item)
-        return {
+        const processed = {
           bureau: item['担当局'] || '',  // 担当局对应B列
           trainNo: item['车次'] || '',   // 车次对应C列
           route: item['运行区间'] || '',
@@ -300,6 +314,8 @@ const handleImport = (): void => {
           luggageService: item['行包作业'] || '',
           remark: item['备注'] || ''
         }
+        console.log('Processed row:', processed)
+        return processed
       })
 
       console.log('处理后的数据:', processedData)

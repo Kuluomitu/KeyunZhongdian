@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { usePassengerStore } from '../store/passenger'
 import { useTrainStore } from '../store/train'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -54,6 +54,11 @@ import * as XLSX from 'xlsx'
 
 const passengerStore = usePassengerStore()
 const trainStore = useTrainStore()
+
+onMounted(() => {
+  console.log('Passenger component mounted')
+  console.log('Initial passengerList:', passengerStore.getAllPassengers())
+})
 
 // 根据类别返回标签类型
 const getTypeTagType = (type: PassengerType): string => {

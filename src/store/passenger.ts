@@ -19,7 +19,7 @@ export const usePassengerStore = defineStore('passenger', () => {
     )
   }
 
-  const addPassenger = (passenger: PassengerForm): void => {
+  const addPassenger = (passenger: PassengerForm): Promise<number> => {
     // 获取当前最大ID
     const maxId = passengerList.value.length > 0 
       ? Math.max(...passengerList.value.map(p => p.id)) 
@@ -28,13 +28,20 @@ export const usePassengerStore = defineStore('passenger', () => {
     // 新ID为最大ID加1
     const newId = maxId + 1
     
+    // 创建新旅客对象，始终设置isServed为false
     const newPassenger: Passenger = {
       ...passenger,
       id: newId,
-      isServed: false
+      isServed: false // 确保新添加的旅客默认未服务
     }
     
+    console.log('添加新旅客对象:', newPassenger)
+    
+    // 添加到列表
     passengerList.value.push(newPassenger)
+    
+    console.log('当前旅客列表:', passengerList.value)
+    return Promise.resolve(newId)
   }
 
   const updatePassenger = (id: number, passenger: Partial<Passenger>): void => {

@@ -49,6 +49,18 @@
                 <div class="card-header">
                   <span>重点旅客登记</span>
                   <el-button-group>
+                    <el-upload
+                      class="upload-demo"
+                      action="#"
+                      :auto-upload="false"
+                      :on-change="handleFileChange"
+                      accept=".xlsx,.xls"
+                      style="display: inline-block; margin-right: 10px;">
+                      <el-button type="primary">
+                        <el-icon><Upload /></el-icon>
+                        导入Excel
+                      </el-button>
+                    </el-upload>
                     <el-button type="success" @click="handleAdd">
                       <el-icon><Plus /></el-icon>
                       添加旅客
@@ -244,10 +256,15 @@
 import { useHome } from '../composables/useHome'
 import { useTrainStore } from '../store/train'
 import { useStaffStore } from '../store/staff'
-import { Check, Plus, User, Bell } from '@element-plus/icons-vue'
+import { usePassengerStore } from '../store/passenger'
+import { Check, Plus, User, Bell, Upload } from '@element-plus/icons-vue'
+import * as XLSX from 'xlsx'
+import { ElMessage } from 'element-plus'
+import type { UploadFile } from 'element-plus'
 
 const trainStore = useTrainStore()
 const staffStore = useStaffStore()
+const passengerStore = usePassengerStore()
 
 const {
   currentTime,
@@ -269,7 +286,8 @@ const {
   handleEdit,
   handleSubmit,
   getTicketTime,
-  handleTicketTimeChange
+  handleTicketTimeChange,
+  handleFileChange
 } = useHome()
 
 // 添加服务人员过滤方法
@@ -445,5 +463,14 @@ const filterStaff = (query: string) => {
 
 .el-row .el-col-4 {
   width: 300px;
+}
+
+.upload-demo {
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.el-upload {
+  display: inline-block;
 }
 </style> 
