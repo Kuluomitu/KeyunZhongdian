@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <el-row :gutter="20">
-      <el-col :span="20">
+      <el-col :span="24">
         <el-card class="welcome-card">
           <template #header>
             <div class="welcome-header">
@@ -48,14 +48,13 @@
               <template #header>
                 <div class="card-header">
                   <span>重点旅客登记</span>
-                  <el-button-group>
+                  <div class="button-group-container">
                     <el-upload
                       class="upload-demo"
                       action="#"
                       :auto-upload="false"
                       :on-change="handleFileChange"
-                      accept=".xlsx,.xls"
-                      style="display: inline-block; margin-right: 10px;">
+                      accept=".xlsx,.xls">
                       <el-button type="primary">
                         <el-icon><Upload /></el-icon>
                         导入Excel
@@ -65,7 +64,7 @@
                       <el-icon><Plus /></el-icon>
                       添加旅客
                     </el-button>
-                  </el-button-group>
+                  </div>
                 </div>
               </template>
               
@@ -75,20 +74,53 @@
                 :row-class-name="getRowClassName">
                 <el-table-column prop="trainNo" label="车次" width="90" />
                 <el-table-column prop="name" label="姓名" width="90" />
-                <el-table-column prop="type" label="类别" width="70">
-                  <template #default="{ row }">
-                    <el-tag :type="getTypeTagType(row.type)">{{ row.type }}</el-tag>
-                  </template>
-                </el-table-column>
+                <el-table-column prop="phone" label="联系电话" width="120" />
                 <el-table-column prop="service" label="服务" width="120" show-overflow-tooltip />
                 <el-table-column prop="staffName" label="服务人员" width="90" />
                 <el-table-column prop="cardNo" label="牌号" width="70" />
-                <el-table-column label="开检时间" width="90">
+                <el-table-column label="开检时间" width="100">
                   <template #default="scope">
-                    {{ getTicketTime(scope.row.trainNo) }}
+                    <el-popover
+                      placement="right"
+                      :width="200"
+                      trigger="click"
+                      v-if="scope.row.trainNo"
+                      @show="initTempTicketTime(scope.row.trainNo)">
+                      <template #reference>
+                        <div class="time-box" :class="{ 
+                          'near-time': isNearTicketTime(scope.row.trainNo),
+                          'expired-time': isExpiredTicketTime(scope.row.trainNo, scope.row.date) 
+                        }">
+                          {{ getTicketTime(scope.row.trainNo) || '无' }}
+                        </div>
+                      </template>
+                      <div>
+                        <el-time-picker
+                          v-model="tempTicketTimes[scope.row.trainNo]"
+                          format="HH:mm"
+                          value-format="HH:mm"
+                          placeholder="选择开检时间"
+                          style="width: 100%; margin-bottom: 10px;"
+                        />
+                        <el-button 
+                          type="primary" 
+                          size="small" 
+                          style="width: 100%;"
+                          @click="handleTicketTimeChange(scope.row.trainNo, tempTicketTimes[scope.row.trainNo])">
+                          保存
+                        </el-button>
+                      </div>
+                    </el-popover>
                   </template>
                 </el-table-column>
                 <el-table-column prop="companions" label="同行" width="60" align="center" />
+                <el-table-column prop="source" label="来源" width="70">
+                  <template #default="{ row }">
+                    <el-tag :type="row.source === 'online' ? 'success' : 'info'">
+                      {{ row.source === 'online' ? '线上' : '线下' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
                 <el-table-column prop="remark" label="备注" width="120" show-overflow-tooltip />
                 <el-table-column label="操作" width="240">
                   <template #default="scope">
@@ -118,7 +150,7 @@
         </el-row>
       </el-col>
 
-      <el-col :span="2">
+      <el-col :span="5">
         <div class="notification-container">
           <div class="notification-header">
             <el-icon><Bell /></el-icon>
@@ -145,17 +177,7 @@
         <el-descriptions-item label="股道">{{ currentTrain?.track }}</el-descriptions-item>
         <el-descriptions-item label="站台">{{ currentTrain?.platform }}</el-descriptions-item>
         <el-descriptions-item label="站停">{{ currentTrain?.stopTime }}</el-descriptions-item>
-        <el-descriptions-item label="开检时间">
-          <el-time-picker
-            v-if="currentTrain"
-            v-model="currentTrain.ticketTime"
-            format="HH:mm"
-            value-format="HH:mm"
-            placeholder="选择开检时间"
-            @change="handleTicketTimeChange"
-            style="width: 120px"
-          />
-        </el-descriptions-item>
+        <el-descriptions-item label="开检时间">{{ getTicketTime(currentTrain?.trainNo || '') }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
 
@@ -192,16 +214,6 @@
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item label="类别" prop="type">
-          <el-select v-model="form.type" placeholder="请选择类别">
-            <el-option label="老" value="老" />
-            <el-option label="弱" value="弱" />
-            <el-option label="病" value="病" />
-            <el-option label="残" value="残" />
-            <el-option label="孕" value="孕" />
-            <el-option label="特殊" value="特殊" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="服务" :required="false">
           <el-select v-model="form.service" placeholder="请选择服务类型" style="width: 100%" clearable>
             <el-option label="引导" value="引导" />
@@ -210,6 +222,9 @@
             <el-option label="盲人" value="盲人" />
             <el-option label="其他" value="其他" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="联系电话" prop="phone">
+          <el-input v-model="form.phone" />
         </el-form-item>
         <el-form-item label="服务人员" prop="staffName">
           <el-select 
@@ -261,6 +276,7 @@ import { Check, Plus, User, Bell, Upload } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { ElMessage } from 'element-plus'
 import type { UploadFile } from 'element-plus'
+import { ref, reactive } from 'vue'
 
 const trainStore = useTrainStore()
 const staffStore = useStaffStore()
@@ -286,9 +302,17 @@ const {
   handleEdit,
   handleSubmit,
   getTicketTime,
+  handleFileChange,
+  checkAndNotify,
+  updateTodayPassengers,
+  updateStatistics,
   handleTicketTimeChange,
-  handleFileChange
+  isNearTicketTime,
+  isExpiredTicketTime
 } = useHome()
+
+// 临时存储开检时间
+const tempTicketTimes = reactive<Record<string, string>>({})
 
 // 添加服务人员过滤方法
 const filterStaff = (query: string) => {
@@ -301,6 +325,13 @@ const filterStaff = (query: string) => {
     staff.staffNo.toLowerCase().includes(lowercaseQuery) || // 匹配工号
     staff.team.toLowerCase().includes(lowercaseQuery)      // 匹配班组
   )
+}
+
+// 初始化车次开检时间
+const initTempTicketTime = (trainNo: string) => {
+  if (trainNo && !tempTicketTimes[trainNo]) {
+    tempTicketTimes[trainNo] = getTicketTime(trainNo) || ''
+  }
 }
 </script>
 
@@ -331,14 +362,21 @@ const filterStaff = (query: string) => {
 
 .card-header {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   position: relative;
+  height: 32px;
 }
 
 .card-header span {
   font-size: 16px;
   font-weight: bold;
+}
+
+.button-group-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .el-button-group {
@@ -466,11 +504,50 @@ const filterStaff = (query: string) => {
 }
 
 .upload-demo {
-  display: inline-block;
-  margin-right: 10px;
+  margin: 0;
 }
 
-.el-upload {
+.upload-demo :deep(.el-upload) {
+  display: block;
+}
+
+:deep(.el-upload--text) {
+  margin: 0;
+}
+
+:deep(.el-upload-list) {
+  display: none;
+}
+
+.time-box {
   display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #f2f6fc;
+  border: 1px solid #dcdfe6;
+  text-align: center;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #409EFF;
+  width: 55px;
+}
+
+.time-box:hover {
+  background-color: #ecf5ff;
+  border-color: #c6e2ff;
+}
+
+.time-box.near-time {
+  background-color: #fdf6ec;
+  border-color: #faecd8;
+  color: #e6a23c;
+}
+
+.time-box.expired-time {
+  background-color: #fef0f0;
+  border-color: #fde2e2;
+  color: #f56c6c;
 }
 </style> 

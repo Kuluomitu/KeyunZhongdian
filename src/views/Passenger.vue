@@ -12,12 +12,8 @@
       <el-table-column prop="date" label="日期" />
       <el-table-column prop="trainNo" label="车次" />
       <el-table-column prop="name" label="姓名" />
-      <el-table-column prop="type" label="类别">
-        <template #default="{ row }">
-          <el-tag :type="getTypeTagType(row.type)">{{ row.type }}</el-tag>
-        </template>
-      </el-table-column>
       <el-table-column prop="service" label="服务" />
+      <el-table-column prop="phone" label="联系电话" />
       <el-table-column prop="staffName" label="服务人员" width="100" />
       <el-table-column label="开检时间">
         <template #default="scope">
@@ -26,6 +22,13 @@
       </el-table-column>
       <el-table-column prop="companions" label="同行人数" />
       <el-table-column prop="cardNo" label="牌号" />
+      <el-table-column prop="source" label="来源" width="70">
+        <template #default="{ row }">
+          <el-tag :type="row.source === 'online' ? 'success' : 'info'">
+            {{ row.source === 'online' ? '线上' : '线下' }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="remark" label="备注" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
@@ -117,12 +120,13 @@ const handleExportExcel = () => {
     '日期': p.date,
     '车次': p.trainNo,
     '姓名': p.name,
-    '类别': p.type,
     '服务': p.service,
+    '联系电话': p.phone,
     '服务人员': p.staffName,
     '开检时间': getTicketTime(p.trainNo),
     '同行人数': p.companions,
     '牌号': p.cardNo,
+    '来源': p.source === 'online' ? '线上' : '线下',
     '备注': p.remark,
     '状态': p.isServed ? '已服务' : '未服务'
   }))

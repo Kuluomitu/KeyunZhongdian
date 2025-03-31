@@ -19,13 +19,14 @@ export interface Passenger {
   date: string
   trainNo: string
   name: string
-  type: PassengerType
   service: string
+  phone: string
   staffName: string
   companions: number
   cardNo: string
   remark: string
   isServed: boolean
+  source: 'online' | 'offline'
 }
 
 // 新增旅客表单接口
@@ -33,12 +34,13 @@ export interface PassengerForm {
   date: string
   trainNo: string
   name: string
-  type: PassengerType
   service: string
+  phone: string
   staffName: string
   companions: number
   cardNo: string
   remark: string
+  source: 'online' | 'offline'
 }
 
 // 旅客统计接口
