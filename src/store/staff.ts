@@ -82,12 +82,21 @@ export const useStaffStore = defineStore('staff', () => {
     }))
   }
 
+  // 清空所有员工数据
+  const clearAllStaff = (): void => {
+    staffList.value = []
+    nextId = 1
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY + '-nextId')
+  }
+
   return {
     staffList,
     addStaff,
     removeStaff,
     updateStaff,
     importStaffFromExcel,
-    getActiveStaffList
+    getActiveStaffList,
+    clearAllStaff
   }
 }) 

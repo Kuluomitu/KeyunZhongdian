@@ -2,7 +2,7 @@
   <el-container class="layout-container">
     <el-header>
       <div class="header-content">
-        <h1>重点旅客信息系统</h1>
+        <h1>重点旅客信息登记系统</h1>
         <div class="nav-buttons">
           <el-button-group>
             <el-button 
@@ -33,6 +33,13 @@
               <el-icon><User /></el-icon>
               服务人员管理
             </el-button>
+            <el-button 
+              :type="$route.path === '/settings' ? 'primary' : 'default'"
+              :class="{ 'nav-button': true, 'active': $route.path === '/settings' }"
+              @click="$router.push('/settings')">
+              <el-icon><Setting /></el-icon>
+              系统设置
+            </el-button>
           </el-button-group>
         </div>
       </div>
@@ -50,7 +57,7 @@
 </template>
 
 <script setup>
-import { HomeFilled, List, User } from '@element-plus/icons-vue'
+import { HomeFilled, List, User, Setting } from '@element-plus/icons-vue'
 import { onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 

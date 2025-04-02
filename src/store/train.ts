@@ -33,12 +33,10 @@ export const useTrainStore = defineStore('train', () => {
 
   // 监听数据变化，自动保存到localStorage
   watch(trainList, (newList) => {
-    console.log('trainList changed:', newList)
     localStorage.setItem('trainList', JSON.stringify(newList))
   }, { deep: true })
 
   const addTrains = (trains: Omit<Train, 'id'>[]): void => {
-    console.log('Adding trains:', trains)
     trainList.value = trains.map((train, index) => ({
       ...train,
       id: index + 1
@@ -60,10 +58,17 @@ export const useTrainStore = defineStore('train', () => {
     }
   }
 
+  // 清空所有车次数据
+  const clearAllTrains = (): void => {
+    trainList.value = []
+    localStorage.removeItem('trainList')
+  }
+
   return {
     trainList,
     addTrains,
     getTrainByNo,
-    updateTrain
+    updateTrain,
+    clearAllTrains
   }
 }) 

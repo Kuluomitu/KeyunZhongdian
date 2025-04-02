@@ -179,10 +179,30 @@ export function useHome() {
     return { type: '通过车', remindMinutes: 3 }
   }
 
+  // 获取用于排序的时间（综合考虑开检时间和到站时间）
+  const getSortTime = (trainNo: string): string => {
+    // 特殊处理特定车次
+    if (trainNo === 'T231') {
+      return '07:25' // T231的到站时间
+    } else if (trainNo === 'D6852') {
+      return '09:16' // D6852的到站时间
+    }
+    
+    const train = trainStore.getTrainByNo(trainNo)
+    if (!train) return ''
+    
+    // 对于终到车，使用到站时间
+    if (train.route2 === '西安' && train.arrivalTime) {
+      return train.arrivalTime
+    }
+    
+    // 对于其他车次，使用开检时间
+    return getTicketTime(trainNo)
+  }
+
   // 更新今日旅客列表
   const updateTodayPassengers = () => {
     const today = new Date().toISOString().split('T')[0]
-    console.log('更新今日旅客列表，当前日期:', today)
     
     // 计算明天的日期
     const tomorrow = new Date()
@@ -191,34 +211,30 @@ export function useHome() {
     
     // 获取所有未服务的今日和明天凌晨的旅客
     const allPassengers = passengerStore.passengerList
-    console.log('所有旅客数据:', allPassengers.length, '条')
     
     const passengers = allPassengers.filter(p => {
       const isToday = p.date === today
       const isTomorrowEarlyMorning = p.date === tomorrowStr && isEarlyMorningTicketTime(p.trainNo)
       const isNotServed = !p.isServed
       
-      console.log(`旅客 ${p.name} (${p.trainNo}): 日期=${p.date}, 已服务=${p.isServed}, 是今天=${isToday}, 是明天凌晨=${isTomorrowEarlyMorning}, 未服务=${isNotServed}`)
-      
       return (isToday || isTomorrowEarlyMorning) && isNotServed
     })
     
-    console.log('筛选后的今日旅客:', passengers.length, '条')
-    
-    // 按优先级排序：没有开检时间 > 临近开检时间 > 未过开检第二天凌晨 > 已经过了开检时间 > 按日期排序
+    // 按优先级排序：将开检时间和到站时间视为同一时间轴排序
     todayPassengers.value = passengers.sort((a, b) => {
       // 首先按日期排序
       if (a.date !== b.date) {
         return a.date.localeCompare(b.date); // 较早的日期排在前面
       }
       
-      const timeA = getTicketTime(a.trainNo)
-      const timeB = getTicketTime(b.trainNo)
+      // 获取综合排序时间
+      const timeA = getSortTime(a.trainNo)
+      const timeB = getSortTime(b.trainNo)
       
-      // 如果有一个没有开检时间
+      // 如果有一个没有时间
       if (!timeA && !timeB) return 0
-      if (!timeA) return -1 // a没有开检时间，排在前面
-      if (!timeB) return 1  // b没有开检时间，排在前面
+      if (!timeA) return -1 // a没有时间，排在前面
+      if (!timeB) return 1  // b没有时间，排在前面
       
       // 检查是否临近或已过开检时间
       const isNearA = isNearTicketTime(a.trainNo)
@@ -244,11 +260,9 @@ export function useHome() {
       if (isExpiredA && !isExpiredB) return 1  // a已过期，b未过期，b排前面
       if (!isExpiredA && isExpiredB) return -1 // a未过期，b已过期，a排前面
       
-      // 都是同一状态，按开检时间排序
+      // 都是同一状态，按综合时间排序
       return timeA.localeCompare(timeB)
     })
-    
-    console.log('最终显示的今日旅客列表:', todayPassengers.value.length, '条')
   }
 
   // 根据类别返回标签类型
@@ -267,6 +281,19 @@ export function useHome() {
   const showTrainInfo = (trainNo: string): void => {
     const train = trainStore.getTrainByNo(trainNo)
     currentTrain.value = train || null
+    
+    // 如果找到车次信息，在显示对话框前处理开检时间
+    if (currentTrain.value && currentTrain.value.ticketTime) {
+      // 格式化开检时间以便在对话框中显示
+      const formattedTime = getTicketTime(trainNo)
+      if (formattedTime) {
+        currentTrain.value = {
+          ...currentTrain.value,
+          ticketTime: formattedTime
+        }
+      }
+    }
+    
     dialogVisible.value = true
   }
 
@@ -304,20 +331,21 @@ export function useHome() {
     const container = document.querySelector('.notification-content')
     if (!container) return
     
-    // 按开检优先级排序，确保提醒顺序稳定
+    // 按综合时间轴排序，确保提醒顺序稳定
     const sortedPassengers = passengers.sort((a, b) => {
       // 首先按日期排序
       if (a.date !== b.date) {
         return a.date.localeCompare(b.date); // 较早的日期排在前面
       }
       
-      const timeA = getTicketTime(a.trainNo)
-      const timeB = getTicketTime(b.trainNo)
+      // 获取综合排序时间
+      const timeA = getSortTime(a.trainNo)
+      const timeB = getSortTime(b.trainNo)
       
-      // 如果有一个没有开检时间
+      // 如果有一个没有时间
       if (!timeA && !timeB) return 0
-      if (!timeA) return -1 // a没有开检时间，排在前面
-      if (!timeB) return 1  // b没有开检时间，排在前面
+      if (!timeA) return -1 // a没有时间，排在前面
+      if (!timeB) return 1  // b没有时间，排在前面
       
       // 检查是否临近或已过开检时间
       const isNearA = isNearTicketTime(a.trainNo)
@@ -343,7 +371,7 @@ export function useHome() {
       if (isExpiredA && !isExpiredB) return 1  // a已过期，b未过期，b排前面
       if (!isExpiredA && isExpiredB) return -1 // a未过期，b已过期，a排前面
       
-      // 都是同一状态，按开检时间排序
+      // 都是同一状态，按综合时间排序
       return timeA.localeCompare(timeB)
     })
     
@@ -449,7 +477,7 @@ export function useHome() {
     // 每1分钟检查一次开检时间（改为更频繁的检查以确保及时清除过期提醒）
     checkInterval = window.setInterval(checkAndNotify, 60 * 1000)
     
-    // 每5秒更新一次页面数据
+    // 每20秒更新一次页面数据
     updateInterval = window.setInterval(() => {
       // 强制更新当前时间
       currentTime.value = new Date().toLocaleDateString()
@@ -457,7 +485,7 @@ export function useHome() {
       updateStatistics()
       // 更新今日旅客列表
       updateTodayPassengers()
-    }, 5000)
+    }, 20 * 1000)
     
     // 立即执行一次更新
     updateStatistics()
@@ -639,20 +667,21 @@ export function useHome() {
           const container = document.querySelector('.notification-content')
           if (!container) return
           
-          // 按开检优先级排序，确保提醒顺序稳定
+          // 按综合时间轴排序，确保提醒顺序稳定
           const sortedPassengers = passengers.sort((a, b) => {
             // 首先按日期排序
             if (a.date !== b.date) {
               return a.date.localeCompare(b.date); // 较早的日期排在前面
             }
             
-            const timeA = getTicketTime(a.trainNo)
-            const timeB = getTicketTime(b.trainNo)
+            // 获取综合排序时间
+            const timeA = getSortTime(a.trainNo)
+            const timeB = getSortTime(b.trainNo)
             
-            // 如果有一个没有开检时间
+            // 如果有一个没有时间
             if (!timeA && !timeB) return 0
-            if (!timeA) return -1 // a没有开检时间，排在前面
-            if (!timeB) return 1  // b没有开检时间，排在前面
+            if (!timeA) return -1 // a没有时间，排在前面
+            if (!timeB) return 1  // b没有时间，排在前面
             
             // 检查是否临近或已过开检时间
             const isNearA = isNearTicketTime(a.trainNo)
@@ -678,7 +707,7 @@ export function useHome() {
             if (isExpiredA && !isExpiredB) return 1  // a已过期，b未过期，b排前面
             if (!isExpiredA && isExpiredB) return -1 // a未过期，b已过期，a排前面
             
-            // 都是同一状态，按开检时间排序
+            // 都是同一状态，按综合时间排序
             return timeA.localeCompare(timeB)
           })
           
@@ -934,26 +963,19 @@ export function useHome() {
               isServed: false
             }
             
-            console.log('准备导入的旅客数据:', passengerData)
-            
             // 直接添加到 store
             await passengerStore.addPassenger(passengerData)
             importedCount++
           }
         }
-
-        console.log(`成功导入 ${importedCount} 条旅客数据`)
         
         // 强制更新数据
-        console.log('开始更新今日旅客列表...')
         await updateTodayPassengers()
         
         // 更新统计数据
-        console.log('更新统计数据...')
         await updateStatistics()
         
         // 立即检查提醒
-        console.log('检查提醒...')
         await checkAndNotify()
         
         // 强制刷新当前时间
@@ -967,6 +989,71 @@ export function useHome() {
     }
 
     reader.readAsArrayBuffer(file.raw)
+  }
+
+  // 处理牌号变更
+  const handleCardNoChange = (row: Passenger): void => {
+    if (!row.cardNo || !row.id) return;
+    
+    // 检查牌号是否重复
+    const today = new Date().toISOString().split('T')[0]
+    const isDuplicate = passengerStore.passengerList.some(passenger => 
+      passenger.cardNo === row.cardNo && 
+      passenger.date === today && 
+      !passenger.isServed &&
+      passenger.id !== row.id
+    )
+
+    if (isDuplicate) {
+      ElMessage.error('该牌号今日已存在')
+      row.cardNo = '' // 清空重复的牌号
+      return
+    }
+
+    // 更新旅客信息
+    passengerStore.updatePassenger(row.id, {
+      ...row,
+      cardNo: row.cardNo
+    })
+    
+    ElMessage.success('牌号更新成功')
+    
+    // 刷新数据
+    updateTodayPassengers()
+  }
+
+  // 修改K213的到站时间
+  const showSetArrivalTimeDialog = (trainNo: string): void => {
+    if (trainNo !== 'K213') return;
+    
+    // 获取K213车次信息
+    const train = trainStore.getTrainByNo('K213')
+    if (!train) {
+      ElMessage.warning('未找到K213车次信息')
+      return
+    }
+    
+    // 使用Element Plus的输入对话框
+    ElMessageBox.prompt('请输入K213的到站时间 (HH:MM格式)', '修改到站时间', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^([01]\d|2[0-3]):([0-5]\d)$/,
+      inputErrorMessage: '请输入有效的时间格式(HH:MM)',
+      inputValue: train.arrivalTime || '06:30'
+    }).then(({ value }) => {
+      // 更新车次信息
+      trainStore.updateTrain(train.id, {
+        ...train,
+        arrivalTime: value
+      })
+      
+      ElMessage.success('到站时间更新成功')
+      
+      // 刷新数据
+      updateTodayPassengers()
+    }).catch(() => {
+      // 用户取消操作，不做任何处理
+    })
   }
 
   return {
@@ -988,6 +1075,7 @@ export function useHome() {
     handleAdd,
     handleEdit,
     handleSubmit,
+    handleCardNoChange,
     getTicketTime,
     handleTicketTimeChange,
     handleFileChange,
@@ -997,6 +1085,7 @@ export function useHome() {
     updateStatistics,
     isNearTicketTime,
     isExpiredTicketTime,
-    isEarlyMorningTicketTime
+    isEarlyMorningTicketTime,
+    showSetArrivalTimeDialog
   }
 } 

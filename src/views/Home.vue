@@ -77,7 +77,16 @@
                 <el-table-column prop="phone" label="联系电话" width="120" />
                 <el-table-column prop="service" label="服务" width="120" show-overflow-tooltip />
                 <el-table-column prop="staffName" label="服务人员" width="90" />
-                <el-table-column prop="cardNo" label="牌号" width="70" />
+                <el-table-column prop="companions" label="同行人数" width="90">
+                  <template #default="scope">
+                    <span>{{ scope.row.companions || 0 }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="cardNo" label="牌号" width="90">
+                  <template #default="scope">
+                    <span>{{ scope.row.cardNo }}</span>
+                  </template>
+                </el-table-column>
                 <el-table-column label="开检时间" width="100">
                   <template #default="scope">
                     <el-popover
@@ -100,29 +109,30 @@
                           format="HH:mm"
                           value-format="HH:mm"
                           placeholder="选择开检时间"
-                          style="width: 100%; margin-bottom: 10px;"
-                        />
-                        <el-button 
-                          type="primary" 
-                          size="small" 
                           style="width: 100%;"
-                          @click="handleTicketTimeChange(scope.row.trainNo, tempTicketTimes[scope.row.trainNo])">
-                          保存
-                        </el-button>
+                          @change="handleTicketTimeChange(scope.row.trainNo, tempTicketTimes[scope.row.trainNo])"
+                        />
                       </div>
                     </el-popover>
                   </template>
                 </el-table-column>
-                <el-table-column prop="companions" label="同行" width="60" align="center" />
-                <el-table-column prop="source" label="来源" width="70">
-                  <template #default="{ row }">
-                    <el-tag :type="row.source === 'online' ? 'success' : 'info'">
-                      {{ row.source === 'online' ? '线上' : '线下' }}
-                    </el-tag>
+                <el-table-column label="到站时间" width="100">
+                  <template #default="scope">
+                    <div class="time-box edit-time" v-if="scope.row.trainNo === 'K213'" @click="showSetArrivalTimeDialog(scope.row.trainNo)" title="点击修改到站时间">
+                      {{ trainStore.getTrainByNo('K213')?.arrivalTime || '06:30' }}
+                    </div>
+                    <div class="time-box" v-else-if="trainStore.getTrainByNo(scope.row.trainNo)?.route2 === '西安'">
+                      <span v-if="scope.row.trainNo === 'T231'">07:25</span>
+                      <span v-else-if="scope.row.trainNo === 'D6852'">09:16</span>
+                      <span v-else>{{ trainStore.getTrainByNo(scope.row.trainNo)?.arrivalTime || '' }}</span>
+                    </div>
+                    <div class="time-box" v-else>
+                      <span>--</span>
+                    </div>
                   </template>
                 </el-table-column>
                 <el-table-column prop="remark" label="备注" width="120" show-overflow-tooltip />
-                <el-table-column label="操作" width="240">
+                <el-table-column label="" width="240">
                   <template #default="scope">
                     <el-button-group>
                       <el-button size="small" @click="showTrainInfo(scope.row.trainNo)">
@@ -177,7 +187,7 @@
         <el-descriptions-item label="股道">{{ currentTrain?.track }}</el-descriptions-item>
         <el-descriptions-item label="站台">{{ currentTrain?.platform }}</el-descriptions-item>
         <el-descriptions-item label="站停">{{ currentTrain?.stopTime }}</el-descriptions-item>
-        <el-descriptions-item label="开检时间">{{ getTicketTime(currentTrain?.trainNo || '') }}</el-descriptions-item>
+        <el-descriptions-item label="开检时间">{{ currentTrain?.ticketTime || getTicketTime(currentTrain?.trainNo || '') }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
 
@@ -308,7 +318,9 @@ const {
   updateStatistics,
   handleTicketTimeChange,
   isNearTicketTime,
-  isExpiredTicketTime
+  isExpiredTicketTime,
+  handleCardNoChange,
+  showSetArrivalTimeDialog
 } = useHome()
 
 // 临时存储开检时间
@@ -549,5 +561,16 @@ const initTempTicketTime = (trainNo: string) => {
   background-color: #fef0f0;
   border-color: #fde2e2;
   color: #f56c6c;
+}
+
+.time-box.edit-time {
+  cursor: pointer;
+  background-color: #ecf5ff;
+  border-color: #c6e2ff;
+}
+
+.time-box.edit-time:hover {
+  background-color: #d0e5ff;
+  border-color: #b3d8ff;
 }
 </style> 
