@@ -7,7 +7,7 @@
       <el-button type="primary" @click="handleExportExcel">导出Excel</el-button>
     </div>
 
-    <el-table :data="passengerStore.getAllPassengers()" style="width: 100%; margin-top: 20px">
+    <el-table :data="paginatedData" style="width: 100%; margin-top: 20px">
       <el-table-column prop="id" label="序号" width="80" />
       <el-table-column prop="date" label="日期" />
       <el-table-column prop="trainNo" label="车次" />
@@ -43,11 +43,22 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <!-- 分页组件 -->
+    <div class="pagination-container">
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        :total="totalItems"
+        layout="prev, pager, next, jumper"
+        @current-change="handleCurrentChange"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { usePassengerStore } from '../store/passenger'
 import { useTrainStore } from '../store/train'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -57,6 +68,27 @@ import * as XLSX from 'xlsx'
 
 const passengerStore = usePassengerStore()
 const trainStore = useTrainStore()
+
+// 分页相关数据
+const currentPage = ref(1)
+const pageSize = ref(15)
+
+// 计算总条目数
+const totalItems = computed(() => {
+  return passengerStore.getAllPassengers().length
+})
+
+// 计算当前页数据
+const paginatedData = computed(() => {
+  const allPassengers = passengerStore.getAllPassengers()
+  const startIndex = (currentPage.value - 1) * pageSize.value
+  return allPassengers.slice(startIndex, startIndex + pageSize.value)
+})
+
+// 页码改变时的处理函数
+const handleCurrentChange = (page: number) => {
+  currentPage.value = page
+}
 
 onMounted(() => {
   console.log('Passenger component mounted')
@@ -83,6 +115,11 @@ const handleDelete = (row: Passenger) => {
   }).then(() => {
     passengerStore.deletePassenger(row.id)
     ElMessage.success('删除成功')
+    
+    // 当前页数据被删完后，自动跳转到前一页（如果有）
+    if (paginatedData.value.length === 0 && currentPage.value > 1) {
+      currentPage.value--
+    }
   })
 }
 
@@ -103,6 +140,7 @@ const handleClearAll = () => {
       passengerStore.clearAllPassengers()
       console.log('清空后的数据：', passengerStore.getAllPassengers())
       ElMessage.success('历史记录已清空')
+      currentPage.value = 1
     } catch (error) {
       console.error('清空历史记录失败：', error)
       ElMessage.error('清空历史记录失败')
@@ -148,5 +186,11 @@ const handleExportExcel = () => {
   margin-bottom: 20px;
   display: flex;
   gap: 10px;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
 }
 </style> 

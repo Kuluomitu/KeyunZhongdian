@@ -47,9 +47,7 @@
     <el-container class="main-container">
       <el-main>
         <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
+          <component :is="Component" />
         </router-view>
       </el-main>
     </el-container>
@@ -67,8 +65,63 @@ onMounted(() => {
   console.log('App mounted, current route:', route.path)
 })
 
-watch(() => route.path, (newPath) => {
-  console.log('Route changed to:', newPath)
+// 清除所有可能残留的表格样式
+const clearAllTableStyles = () => {
+  console.log('路由变化，清除所有表格样式')
+  // 选择所有表格行
+  const allRows = document.querySelectorAll('tr')
+  if (allRows && allRows.length > 0) {
+    allRows.forEach((row) => {
+      try {
+        // 移除所有样式类
+        row.classList.remove('near-row', 'expired-row', 'left-row', 'urgent-row')
+        
+        // 清除内联样式
+        if (row instanceof HTMLElement) {
+          row.style.cssText = ''
+        }
+        
+        // 清除所有单元格样式
+        const cells = row.querySelectorAll('td')
+        cells.forEach((cell) => {
+          if (cell instanceof HTMLElement) {
+            cell.style.cssText = ''
+          }
+        })
+      } catch (e) {
+        console.error('清除样式时出错:', e)
+      }
+    })
+  }
+  
+  // 特别处理终到车样式
+  const terminalCells = document.querySelectorAll('.terminal-train')
+  if (terminalCells && terminalCells.length > 0) {
+    terminalCells.forEach((cell) => {
+      try {
+        if (cell instanceof HTMLElement) {
+          cell.style.cssText = ''
+          
+          // 恢复正常的绿色样式
+          cell.style.backgroundColor = '#e1f3d8'
+          cell.style.color = '#67c23a'
+          cell.style.borderColor = '#c2e7b0'
+        }
+      } catch (e) {
+        console.error('恢复终到车样式时出错:', e)
+      }
+    })
+  }
+}
+
+watch(() => route.path, (newPath, oldPath) => {
+  console.log('Route changed to:', newPath, 'from:', oldPath)
+  
+  // 只有当从首页切换到其他页面时，才清除所有表格样式
+  if (oldPath === '/' && newPath !== '/') {
+    console.log('从首页离开，清除所有表格样式')
+    clearAllTableStyles()
+  }
 })
 </script>
 
@@ -122,7 +175,7 @@ watch(() => route.path, (newPath) => {
 
 .nav-buttons .nav-button {
   padding: 8px 20px;
-  transition: all 0.3s;
+  transition: none;
   background-color: transparent;
   border-color: rgba(255, 255, 255, 0.5);
   color: #ffffff;
@@ -130,7 +183,7 @@ watch(() => route.path, (newPath) => {
 }
 
 .nav-buttons .nav-button:hover {
-  transform: translateY(-2px);
+  transform: none;
   background-color: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.8);
 }
@@ -167,12 +220,12 @@ watch(() => route.path, (newPath) => {
 /* 过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: none;
 }
 
 .fade-enter-from,
 .fade-leave-to {
-  opacity: 0;
+  opacity: 1;
 }
 
 /* 全局样式 */

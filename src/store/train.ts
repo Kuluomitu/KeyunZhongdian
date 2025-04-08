@@ -64,11 +64,33 @@ export const useTrainStore = defineStore('train', () => {
     localStorage.removeItem('trainList')
   }
 
+  // 更新列车开检时间
+  const updateTrainTicketTime = (trainNo: string, ticketTime: string): void => {
+    const train = trainList.value.find(t => t.trainNo === trainNo)
+    if (train) {
+      train.ticketTime = ticketTime
+      // 保存到localStorage
+      localStorage.setItem('trainList', JSON.stringify(trainList.value))
+    }
+  }
+
+  // 更新列车到站时间
+  const updateTrainArrivalTime = (trainNo: string, arrivalTime: string): void => {
+    const train = trainList.value.find(t => t.trainNo === trainNo)
+    if (train) {
+      train.arrivalTime = arrivalTime
+      // 保存到localStorage
+      localStorage.setItem('trainList', JSON.stringify(trainList.value))
+    }
+  }
+
   return {
     trainList,
     addTrains,
     getTrainByNo,
     updateTrain,
-    clearAllTrains
+    clearAllTrains,
+    updateTrainTicketTime,
+    updateTrainArrivalTime
   }
 }) 
